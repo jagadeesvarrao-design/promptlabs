@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  prompts     Prompt[]
+}
+
+model Prompt {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  versions    PromptVersion[]
+  experiments Experiment[]
+}
+
+model PromptVersion {
+  id            String   @id @default(cuid())
+  promptId      String
+  prompt        Prompt   @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  systemMessage String?
+  userTemplate  String
+  model         String   @default("gemini-2.5-flash")
+  temperature   Float    @default(0.7)
+  maxTokens     Int      @default(500)
+  tag           String   @default("draft")
+  commitMessage String?
+  createdAt     DateTime @default(now())
+
+  experimentsAsA Experiment[] @relation("VersionA")
+  experimentsAsB Experiment[] @relation("VersionB")
+  results        Result[]
+}
+
+model Experiment {
+  id          String        @id @default(cuid())
+  name        String
+  promptId    String
+  prompt      Prompt        @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  versionAId  String
+  versionBId  String
+  versionA    PromptVersion @relation("VersionA", fields: [versionAId], references: [id])
+  versionB    PromptVersion @relation("VersionB", fields: [versionBId], references: [id])
+  status      String        @default("pending")
+  createdAt   DateTime      @default(now())
+  completedAt DateTime?
+  testCases   TestCase[]
+  results     Result[]
+}
+
+model TestCase {
+  id             String     @id @default(cuid())
+  experimentId   String
+  experiment     Experiment @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  inputVariables String
+  expectedOutput String?
+  results        Result[]
+}
+
+model Result {
+  id               String        @id @default(cuid())
+  experimentId     String
+  testCaseId       String
+  versionId        String
+  experiment       Experiment    @relation(fields: [experimentId], references: [id], onDelete: Cascade)
+  testCase         TestCase      @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  version          PromptVersion @relation(fields: [versionId], references: [id])
+  output           String
+  latencyMs        Int
+  promptTokens     Int
+  completionTokens Int
+  estimatedCostUsd Float
+  qualityScore     Float?
+  createdAt        DateTime      @default(now())
+}
