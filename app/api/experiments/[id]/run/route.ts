@@ -47,6 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
               userInput,
               output: result.output,
               expectedOutput: testCase.expectedOutput || undefined,
+              rubric: experiment.evaluationRubric || undefined,
             })
           }
 

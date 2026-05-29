@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { Plus, Trash2, FlaskConical } from 'lucide-react'
 import Modal from './modal'
+import { parseCSV } from '@/lib/csv-parser'
 
 interface Version {
   id: string
@@ -29,6 +30,7 @@ export default function ExperimentCreator({ isOpen, onClose, promptId, versions,
   const [versionAId, setVersionAId] = useState(versions[0]?.id || '')
   const [versionBId, setVersionBId] = useState(versions[1]?.id || versions[0]?.id || '')
   const [testCases, setTestCases] = useState<TestCase[]>([{ inputVariables: {}, expectedOutput: '' }])
+  const [evaluationRubric, setEvaluationRubric] = useState('')
   const [varKey, setVarKey] = useState('')
   const [isCreating, setIsCreating] = useState(false)
   const [error, setError] = useState('')
@@ -71,6 +73,54 @@ export default function ExperimentCreator({ isOpen, onClose, promptId, versions,
 
   const varKeys = Object.keys(testCases[0]?.inputVariables || {})
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string
+        const parsed = parseCSV(text)
+        
+        if (parsed.data.length === 0) {
+          setError('No valid data found in CSV')
+          return
+        }
+
+        // Map CSV headers to existing template variables, or add new ones
+        const newTestCases: TestCase[] = parsed.data.map((row) => {
+          const inputVars: Record<string, string> = {}
+          let expected = ''
+
+          Object.entries(row).forEach(([key, val]) => {
+            const trimmedKey = key.trim()
+            if (trimmedKey.toLowerCase() === 'expectedoutput' || trimmedKey.toLowerCase() === 'expected output' || trimmedKey.toLowerCase() === 'expected') {
+              expected = val
+            } else {
+              inputVars[trimmedKey] = val
+            }
+          })
+
+          // Ensure all existing varKeys are present in the new test cases
+          varKeys.forEach(vk => {
+            if (inputVars[vk] === undefined) inputVars[vk] = ''
+          })
+
+          return { inputVariables: inputVars, expectedOutput: expected }
+        })
+
+        setTestCases(newTestCases)
+        setError('')
+      } catch (err) {
+        setError('Failed to parse CSV file')
+      }
+    }
+    reader.readAsText(file)
+    // reset input
+    e.target.value = ''
+  }
+
   const handleCreate = async () => {
     if (!name.trim()) { setError('Experiment name is required'); return }
     if (versionAId === versionBId) { setError('Select two different versions to compare'); return }
@@ -80,7 +130,7 @@ export default function ExperimentCreator({ isOpen, onClose, promptId, versions,
       const res = await fetch('/api/experiments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, promptId, versionAId, versionBId, testCases }),
+        body: JSON.stringify({ name, promptId, versionAId, versionBId, testCases, evaluationRubric }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -126,6 +176,20 @@ export default function ExperimentCreator({ isOpen, onClose, promptId, versions,
           ))}
         </div>
 
+        {/* Custom Rubric */}
+        <div>
+          <label className="block text-xs font-medium mb-1.5 flex items-center justify-between" style={{ color: 'var(--muted)' }}>
+            <span>Custom Grading Rubric <span className="text-slate-500 font-normal">(Optional)</span></span>
+          </label>
+          <textarea
+            className={inputCls}
+            style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }}
+            placeholder="e.g. Score 5 if the tone is humorous, 1 if dry. Must include the word 'pirate'."
+            value={evaluationRubric}
+            onChange={(e) => setEvaluationRubric(e.target.value)}
+          />
+        </div>
+
         {/* Variable fields definition */}
         <div>
           <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--muted)' }}>Template Variables</label>
@@ -159,9 +223,15 @@ export default function ExperimentCreator({ isOpen, onClose, promptId, versions,
             <label className="text-xs font-medium" style={{ color: 'var(--muted)' }}>
               Test Cases ({testCases.length})
             </label>
-            <button onClick={addTestCase} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors" style={{ color: '#a78bfa', background: 'rgba(124,58,237,0.1)' }}>
-              <Plus size={10} /> Add Case
-            </button>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors cursor-pointer" style={{ color: '#06b6d4', background: 'rgba(6,182,212,0.1)' }}>
+                <Plus size={10} /> Bulk Import (CSV)
+                <input type="file" accept=".csv" className="hidden" onChange={handleFileUpload} />
+              </label>
+              <button onClick={addTestCase} className="flex items-center gap-1 text-xs px-2 py-1 rounded-lg transition-colors" style={{ color: '#a78bfa', background: 'rgba(124,58,237,0.1)' }}>
+                <Plus size={10} /> Add Case
+              </button>
+            </div>
           </div>
           <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
             {testCases.map((tc, i) => (

@@ -92,12 +92,15 @@ export async function judgeQuality(params: {
   userInput: string
   output: string
   expectedOutput?: string
+  rubric?: string
 }): Promise<number> {
-  const { userInput, output, expectedOutput } = params
+  const { userInput, output, expectedOutput, rubric } = params
+
+  const rubricText = rubric ? `\nSpecial Grading Rubric:\n${rubric}\n` : ''
 
   const judgePrompt = expectedOutput
     ? `You are an expert AI output evaluator. Rate the following AI response on a scale of 1 to 5.
-
+${rubricText}
 User Input: ${userInput}
 Expected Output: ${expectedOutput}
 Actual Output: ${output}
@@ -105,7 +108,7 @@ Actual Output: ${output}
 Score based on: accuracy vs expected, relevance, and clarity.
 Respond with ONLY a single decimal number between 1 and 5. Example: 4.2`
     : `You are an expert AI output evaluator. Rate the following AI response on a scale of 1 to 5.
-
+${rubricText}
 User Input: ${userInput}
 AI Output: ${output}
 
@@ -116,7 +119,9 @@ Respond with ONLY a single decimal number between 1 and 5. Example: 3.8`
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
     const result = await model.generateContent(judgePrompt)
     const text = result.response.text().trim()
-    const score = parseFloat(text)
+    // Robust parsing for a decimal score anywhere in the text (e.g. handles markdown blocks or conversational padding)
+    const match = text.match(/\d+(\.\d+)?/)
+    const score = match ? parseFloat(match[0]) : parseFloat(text)
     if (isNaN(score) || score < 1 || score > 5) return 3.0
     return Math.round(score * 10) / 10
   } catch {

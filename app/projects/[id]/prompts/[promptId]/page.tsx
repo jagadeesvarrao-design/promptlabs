@@ -8,9 +8,10 @@ import VersionSidebar from '@/components/version-sidebar'
 import TestPanel from '@/components/test-panel'
 import DiffViewer from '@/components/diff-viewer'
 import ExperimentCreator from '@/components/experiment-creator'
+import ApiIntegrationModal from '@/components/api-integration-modal'
 import {
   ChevronLeft, Save, Play, GitBranch, FlaskConical, Loader2,
-  Thermometer, Hash, Cpu, ChevronDown, ChevronUp, ArrowRight,
+  Thermometer, Hash, Cpu, ChevronDown, ChevronUp, ArrowRight, Server,
 } from 'lucide-react'
 import { extractVariables } from '@/lib/prompt-utils'
 
@@ -73,6 +74,7 @@ export default function PromptEditorPage() {
   const [showDiff, setShowDiff] = useState(false)
   const [diffVersions, setDiffVersions] = useState<{ a: Version | null; b: Version | null }>({ a: null, b: null })
   const [showExpCreator, setShowExpCreator] = useState(false)
+  const [showApiModal, setShowApiModal] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [activeTab, setActiveTab] = useState<'editor' | 'experiments'>('editor')
 
@@ -182,6 +184,14 @@ export default function PromptEditorPage() {
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            <button
+              onClick={() => setShowApiModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all hover:bg-white/5"
+              style={{ color: '#06b6d4', border: '1px solid rgba(6,182,212,0.3)' }}
+            >
+              <Server size={13} />
+              API
+            </button>
             <input
               type="text"
               value={commitMessage}
@@ -482,6 +492,12 @@ export default function PromptEditorPage() {
         promptId={promptId}
         versions={prompt.versions}
         onCreated={handleExpCreated}
+      />
+      <ApiIntegrationModal
+        isOpen={showApiModal}
+        onClose={() => setShowApiModal(false)}
+        promptId={promptId}
+        promptName={prompt.name}
       />
     </div>
   )

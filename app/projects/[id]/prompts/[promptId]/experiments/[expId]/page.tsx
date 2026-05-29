@@ -92,20 +92,21 @@ export default function ExperimentResultsPage() {
   const bResults = exp.results.filter((r) => r.versionId === exp.versionB.id)
 
   const aStats = {
-    quality: avg(aResults.map((r) => r.qualityScore ?? 0)),
+    quality: avg(aResults.map((r) => r.qualityScore).filter((q): q is number => q !== null)),
     latency: avg(aResults.map((r) => r.latencyMs)),
     cost: avg(aResults.map((r) => r.estimatedCostUsd)),
     tokens: avg(aResults.map((r) => r.promptTokens + r.completionTokens)),
   }
   const bStats = {
-    quality: avg(bResults.map((r) => r.qualityScore ?? 0)),
+    quality: avg(bResults.map((r) => r.qualityScore).filter((q): q is number => q !== null)),
     latency: avg(bResults.map((r) => r.latencyMs)),
     cost: avg(bResults.map((r) => r.estimatedCostUsd)),
     tokens: avg(bResults.map((r) => r.promptTokens + r.completionTokens)),
   }
 
   const hasResults = exp.results.length > 0
-  const winner = hasResults
+  const hasQualityScores = exp.results.some((r) => r.qualityScore !== null)
+  const winner = (hasResults && hasQualityScores)
     ? aStats.quality > bStats.quality ? 'A' : bStats.quality > aStats.quality ? 'B' : 'TIE'
     : null
 

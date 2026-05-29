@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { name, promptId, versionAId, versionBId, testCases } = body
+    const { name, promptId, versionAId, versionBId, testCases, evaluationRubric } = body
 
     if (!name?.trim() || !promptId || !versionAId || !versionBId) {
       return NextResponse.json({ error: 'name, promptId, versionAId, versionBId required' }, { status: 400 })
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
         versionAId,
         versionBId,
         status: 'pending',
+        evaluationRubric: evaluationRubric?.trim() || null,
         testCases: {
           create: testCases.map((tc: { inputVariables: Record<string, string>; expectedOutput?: string }) => ({
             inputVariables: JSON.stringify(tc.inputVariables || {}),

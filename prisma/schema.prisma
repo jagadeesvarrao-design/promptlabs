@@ -48,19 +48,20 @@ model PromptVersion {
 }
 
 model Experiment {
-  id          String        @id @default(cuid())
-  name        String
-  promptId    String
-  prompt      Prompt        @relation(fields: [promptId], references: [id], onDelete: Cascade)
-  versionAId  String
-  versionBId  String
-  versionA    PromptVersion @relation("VersionA", fields: [versionAId], references: [id])
-  versionB    PromptVersion @relation("VersionB", fields: [versionBId], references: [id])
-  status      String        @default("pending")
-  createdAt   DateTime      @default(now())
-  completedAt DateTime?
-  testCases   TestCase[]
-  results     Result[]
+  id               String        @id @default(cuid())
+  name             String
+  promptId         String
+  prompt           Prompt        @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  versionAId       String
+  versionBId       String
+  versionA         PromptVersion @relation("VersionA", fields: [versionAId], references: [id])
+  versionB         PromptVersion @relation("VersionB", fields: [versionBId], references: [id])
+  status           String        @default("pending")
+  createdAt        DateTime      @default(now())
+  completedAt      DateTime?
+  evaluationRubric String?
+  testCases        TestCase[]
+  results          Result[]
 }
 
 model TestCase {
