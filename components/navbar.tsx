@@ -2,7 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { FlaskConical, FolderOpen, LayoutDashboard, Zap, HelpCircle } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { FlaskConical, FolderOpen, LayoutDashboard, Zap, HelpCircle, Settings, LogOut } from 'lucide-react'
 
 const STORAGE_KEY = 'promptlab_onboarding_done'
 
@@ -14,6 +15,7 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { data: session, status } = useSession()
 
   const reopenTour = () => {
     localStorage.removeItem(STORAGE_KEY)
@@ -54,10 +56,23 @@ export default function Navbar() {
               </Link>
             )
           })}
+          {status === 'authenticated' && (
+            <Link
+              href="/settings"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200"
+              style={{
+                color: pathname.startsWith('/settings') ? '#a78bfa' : '#94a3b8',
+                background: pathname.startsWith('/settings') ? 'rgba(124,58,237,0.12)' : 'transparent',
+              }}
+            >
+              <Settings size={14} />
+              Settings
+            </Link>
+          )}
         </div>
 
-        {/* Right: Help + Model badge */}
-        <div className="flex items-center gap-2">
+        {/* Right: Help + User */}
+        <div className="flex items-center gap-3">
           <button
             onClick={reopenTour}
             title="Open onboarding guide"
@@ -66,10 +81,35 @@ export default function Navbar() {
           >
             <HelpCircle size={15} />
           </button>
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium" style={{ background: 'rgba(6,182,212,0.1)', color: '#06b6d4', border: '1px solid rgba(6,182,212,0.25)' }}>
-            <Zap size={10} />
-            Gemini Powered
-          </div>
+          
+          {status === 'authenticated' ? (
+            <div className="flex items-center gap-3 pl-3" style={{ borderLeft: '1px solid var(--border)' }}>
+              <div className="flex items-center gap-2">
+                {session.user?.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.user.image} alt="Avatar" className="w-6 h-6 rounded-full border border-white/10" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-violet-500/20 border border-violet-500/30"></div>
+                )}
+                <span className="text-xs font-medium text-slate-300 hidden sm:block">{session.user?.name || 'User'}</span>
+              </div>
+              <button
+                onClick={() => signOut({ callbackUrl: '/login' })}
+                title="Log out"
+                className="p-1.5 rounded-lg transition-colors hover:bg-red-500/10 text-slate-400 hover:text-red-400"
+              >
+                <LogOut size={14} />
+              </button>
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-all hover:scale-105"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #6d28d9)' }}
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </div>
     </nav>

@@ -61,9 +61,9 @@ export default function ProjectsPage() {
     setProjects((prev) => prev.filter((p) => p.id !== id))
   }
 
-  const filtered = projects.filter(
+  const filtered = Array.isArray(projects) ? projects.filter(
     (p) => p.name.toLowerCase().includes(search.toLowerCase()) || (p.description || '').toLowerCase().includes(search.toLowerCase())
-  )
+  ) : []
 
   const inputCls = "w-full px-3 py-2 rounded-lg text-sm text-slate-200 placeholder-slate-500 outline-none transition-all"
   const inputStyle = { background: 'rgba(0,0,0,0.3)', border: '1px solid var(--border)' }

@@ -3,6 +3,20 @@ import { prisma } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   try {
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing or invalid Authorization header' }, { status: 401 })
+    }
+    const token = authHeader.split(' ')[1]
+
+    const apiKey = await prisma.apiKey.findUnique({ where: { key: token } })
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Invalid API Key' }, { status: 403 })
+    }
+
+    // Update lastUsed asynchronously
+    prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsed: new Date() } }).catch(() => {})
+
     const { searchParams } = new URL(req.url)
     const promptId = searchParams.get('promptId')
     const tag = searchParams.get('tag') || 'production'

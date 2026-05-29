@@ -10,14 +10,13 @@ export async function GET() {
     const user = await prisma.user.findUnique({ where: { email: session.user.email } })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 401 })
 
-    const projects = await prisma.project.findMany({
+    const keys = await prisma.apiKey.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
-      include: { _count: { select: { prompts: true } } },
     })
-    return NextResponse.json(projects)
+    return NextResponse.json(keys)
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch keys' }, { status: 500 })
   }
 }
 
@@ -29,15 +28,21 @@ export async function POST(req: NextRequest) {
     const user = await prisma.user.findUnique({ where: { email: session.user.email } })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 401 })
 
-    const body = await req.json()
-    const { name, description } = body
+    const { name } = await req.json()
     if (!name?.trim()) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
-    const project = await prisma.project.create({
-      data: { name: name.trim(), description: description?.trim() || null, userId: user.id },
+    // Generate a secure random key
+    const rawKey = 'plab_' + crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '').substring(0, 16)
+
+    const apiKey = await prisma.apiKey.create({
+      data: {
+        name: name.trim(),
+        key: rawKey,
+        userId: user.id,
+      },
     })
-    return NextResponse.json(project, { status: 201 })
+    return NextResponse.json(apiKey, { status: 201 })
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to create project' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create API key' }, { status: 500 })
   }
 }
